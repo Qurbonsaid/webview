@@ -8,6 +8,7 @@ on:
 
 jobs:
   build:
+    permissions: write-all
     name: Build Debug APK
     runs-on: ubuntu-latest
 
