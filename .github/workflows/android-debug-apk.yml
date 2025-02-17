@@ -1,4 +1,4 @@
-name: Build Debug APK
+name: Build & Release Debug APK
 
 on:
   push:
@@ -30,14 +30,42 @@ jobs:
           key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: gradle-${{ runner.os }}-
 
-      - name: 🚀 Grant Execute Permission to Gradle Wrapper
-        run: chmod +x gradlew
-
       - name: 🔨 Build Debug APK
-        run: ./gradlew assembleDebug
+        run: chmod +x gradlew && ./gradlew assembleDebug
 
-      - name: 📤 Upload Debug APK
+      - name: 🏷 Get Version Name
+        id: version
+        run: echo "VERSION_NAME=$(./gradlew -q printVersionName)" >> $GITHUB_ENV
+
+      - name: 📤 Upload Debug APK as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+
+  release:
+    name: Release Debug APK
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: 🛎 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 📥 Download APK Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: debug-apk
+          path: app/build/outputs/apk/debug/
+
+      - name: 🚀 Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION_NAME }}-debug
+          release_name: "Debug Build v${{ env.VERSION_NAME }}"
+          body: "📦 New debug build available!"
+          draft: false
+          prerelease: false
+          files: app/build/outputs/apk/debug/app-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
